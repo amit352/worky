@@ -1,0 +1,1 @@
+AppName.HomeController = Ember.ArrayController.extend()

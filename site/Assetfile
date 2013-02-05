@@ -1,0 +1,128 @@
+($: << './lib').flatten!
+require 'json'
+require 'rake-pipeline-web-filters'
+require 'compass'
+require 'asset_dependencies'
+
+if ENV['RACK_ENV'] == 'production'
+  require 'uglifier'
+  require 'yui/compressor'
+end
+
+Compass.configuration do |c|
+  c.project_path = 'app'
+  c.http_generated_images_path = '/images'
+end
+
+load_gem_assets('public', 'bootstrap-sass')
+
+output 'public'
+
+input ['app', 'lib'] do
+
+  match "**/*.coffee" do
+    coffee_script
+    filter RequireRewriteFilter
+    minispade string: true, rewrite_requires: true, module_id_generator: ->(input){
+      RequireRewriteFilter.module_id(input.path)
+    }
+    if ENV['RACK_ENV'] == 'production'
+      uglify
+    end
+    concat "javascript/application.js"
+  end
+
+  match "**/*.handlebars" do
+    handlebars :key_name_proc => proc { |input|
+      %r{templates/(.*).handlebars}.match(input.path)
+      $1
+    }
+    filter RequireRewriteFilter
+    minispade string: true, rewrite_requires: true, module_id_generator: ->(input){
+      RequireRewriteFilter.module_id(input.path)
+    }
+    if ENV['RACK_ENV'] == 'production'
+      uglify
+    end
+    concat "javascript/application.js"
+  end
+
+  match /^stylesheet\/application.scss/ do
+    sass additional_load_paths: 'app/stylesheet/',
+      load_paths: GemHelpers.sass_load_paths('bootstrap-sass', 'compass')
+    if ENV['RACK_ENV'] == 'production'
+      yui_css
+    end
+    concat 'stylesheet/application.css'
+  end
+
+  match "stylesheet/images/*" do
+    concat do |filename|
+      filename
+    end
+  end
+
+  match /^static\// do
+    concat do |filename|
+      filename.gsub(/^static\//, '')
+    end
+  end
+end
+
+input 'test' do
+  match "lib/**/*.coffee" do
+    coffee_script
+    filter RequireRewriteFilter
+    minispade string: true, rewrite_requires: true, module_id_generator: ->(input){
+      RequireRewriteFilter.module_id("#{input.path}")
+    }
+    concat "javascript/application-tests.js"
+  end
+
+  match "unit/**/*.coffee" do
+    coffee_script
+    filter RequireRewriteFilter
+    minispade string: true, rewrite_requires: true, module_id_generator: ->(input){
+      RequireRewriteFilter.module_id("test/#{input.path}")
+    }
+    concat "javascript/application-tests.js"
+  end
+
+  match "unit/**/*.js" do
+    filter RequireRewriteFilter
+    minispade string: true, rewrite_requires: true, module_id_generator: ->(input){
+      RequireRewriteFilter.module_id("test/#{input.path}")
+    }
+    concat "javascript/application-tests.js"
+  end
+
+  match /^static\// do
+    concat do |filename|
+      filename.gsub(/^static\//, '')
+    end
+  end
+end
+
+input ['vendor'] do
+  output 'tmp/vendor'
+  match '**/*' do
+    concat do |filename|
+      match_data = /javascript\/([^\/]*)/.match(filename)
+      if match_data.nil?
+        "trash"
+      else
+        "#{match_data[1]}.js"
+      end
+    end
+  end
+end
+
+input ['tmp/vendor'] do
+  output 'public'
+  match '**/*.js' do
+    minispade string: true, rewrite_requires: true, module_id_generator: ->(input){
+      /^([^.]*)/.match(input.path)[1]
+    }
+    concat 'javascript/dependencies.js'
+  end
+end

@@ -1,0 +1,25 @@
+# Sass
+.sass-cache/
+application.css
+
+# Generated stuff
+public/
+
+# Asset pipeline filter
+.bundle
+tmp
+
+## EMACS
+*~
+\#*
+.\#*
+
+## VIM
+*.swp
+
+# IDEA
+.idea/
+*.iml
+
+# RVM
+.rvmrc

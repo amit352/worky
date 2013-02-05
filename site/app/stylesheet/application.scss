@@ -1,0 +1,11 @@
+$iconSpritePath:          url("../images/glyphicons-halflings.png") !default;
+$iconWhiteSpritePath:     url("../images/glyphicons-halflings-white.png") !default;
+
+// Bootstrap
+// Core variables and mixins
+@import "bootstrap/variables"; // Modify this for custom colors, font-sizes, etc
+@import "bootstrap/mixins";
+ 
+ 
+// End Boostrap
+@import "bootstrap";
